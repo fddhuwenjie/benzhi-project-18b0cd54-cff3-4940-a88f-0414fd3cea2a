@@ -20,8 +20,11 @@ func (s *Service) Evidence(id string) (*EvidenceResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cached, ok := s.evidenceCache.Load(head); ok {
-		return cached.(*EvidenceResult), nil
+	cacheKey := evidenceCacheKey(id, head)
+	if cached, ok := s.evidenceCache.Load(cacheKey); ok {
+		if result, ok := cached.(*EvidenceResult); ok && evidenceBelongsToBatch(result, id) {
+			return result, nil
+		}
 	}
 	batch, proof, err := s.store.ArchivedEvidence(id)
 	if err != nil {
@@ -35,6 +38,17 @@ func (s *Service) Evidence(id string) (*EvidenceResult, error) {
 		return nil, domain.NewError("integrity_error", "归档证据核验失败："+err.Error(), 409)
 	}
 	result := &EvidenceResult{Package: p, IntegrityDigest: batch.Certificate.IntegrityDigest, Certificate: batch.Certificate, EvidenceManifest: batch.Certificate.EvidenceManifest, Verification: "verified"}
-	actual, _ := s.evidenceCache.LoadOrStore(head, result)
-	return actual.(*EvidenceResult), nil
+	actual, _ := s.evidenceCache.LoadOrStore(cacheKey, result)
+	if stored, ok := actual.(*EvidenceResult); ok && evidenceBelongsToBatch(stored, id) {
+		return stored, nil
+	}
+	return result, nil
+}
+
+func evidenceCacheKey(batchID, auditHead string) string {
+	return batchID + "\x00" + auditHead
+}
+
+func evidenceBelongsToBatch(result *EvidenceResult, batchID string) bool {
+	return result != nil && result.Package.BatchID == batchID && result.Certificate != nil && result.Certificate.BatchID == batchID
 }
