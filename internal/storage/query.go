@@ -51,13 +51,17 @@ func (s *Store) archivedProof(batchID, auditHead string, chain audit.Chain) ([]a
 	s.proofMu.Lock()
 	defer s.proofMu.Unlock()
 	if cached, ok := s.archiveProofCache[batchID]; ok {
-		return cached, nil
+		proof := make([]audit.Event, len(cached))
+		copy(proof, cached)
+		return proof, nil
 	}
 	proof, err := chain.PrefixThrough(auditHead)
 	if err != nil {
 		return nil, err
 	}
-	s.archiveProofCache[batchID] = proof
+	cached := make([]audit.Event, len(proof))
+	copy(cached, proof)
+	s.archiveProofCache[batchID] = cached
 	return proof, nil
 }
 
