@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -8,8 +9,15 @@ import (
 )
 
 func (s *Store) Update(fn func(*State) error) error {
+	return s.UpdateContext(context.Background(), fn)
+}
+
+func (s *Store) UpdateContext(ctx context.Context, fn func(*State) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("请求已取消，事务未提交: %w", err)
+	}
 	copy, err := cloneState(s.state)
 	if err != nil {
 		return err
@@ -22,6 +30,9 @@ func (s *Store) Update(fn func(*State) error) error {
 	}
 	if err := verifyState(copy, true); err != nil {
 		return fmt.Errorf("提交前状态校验: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("请求已取消，事务未提交: %w", err)
 	}
 	if err := s.persist(copy); err != nil {
 		return err

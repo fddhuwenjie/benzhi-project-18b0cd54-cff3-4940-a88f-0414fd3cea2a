@@ -1,23 +1,8 @@
 package api
 
 import (
-	"anaerobic-release/internal/domain"
-	"context"
-	"fmt"
 	"net/http"
 )
-
-func finishWrite[T any](ctx context.Context, run func() (T, error)) (T, error) {
-	result, err := run()
-	if err != nil {
-		return result, err
-	}
-	if err := ctx.Err(); err != nil {
-		var zero T
-		return zero, fmt.Errorf("请求已取消但写事务已经结束: %w", err)
-	}
-	return result, nil
-}
 
 func (s *Server) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	head, err := s.workflow.Store().AuditHead()
@@ -34,9 +19,7 @@ func (s *Server) CreateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	result, err := finishWrite(r.Context(), func() (*domain.SampleBatch, error) {
-		return s.workflow.CreateBatch(body.command(requestID(r)))
-	})
+	result, err := s.workflow.WithContext(r.Context()).CreateBatch(body.command(requestID(r)))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -59,7 +42,7 @@ func (s *Server) FreezePlanHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	result, err := s.workflow.FreezePlan(body.command(r.PathValue("batch_id"), requestID(r)))
+	result, err := s.workflow.WithContext(r.Context()).FreezePlan(body.command(r.PathValue("batch_id"), requestID(r)))
 	if err != nil {
 		writeError(w, r, err)
 		return

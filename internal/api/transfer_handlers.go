@@ -11,7 +11,7 @@ func (s *Server) AddCheckpointHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, err)
 		return
 	}
-	result, err := s.workflow.AddCheckpoint(body.command(r.PathValue("batch_id"), requestID(r)))
+	result, err := s.workflow.WithContext(r.Context()).AddCheckpoint(body.command(r.PathValue("batch_id"), requestID(r)))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -28,7 +28,7 @@ func (s *Server) ResolveDeviationHandler(w http.ResponseWriter, r *http.Request)
 	batchID := r.PathValue("batch_id")
 	retest := body.Retest.command(batchID, requestID(r))
 	cmd := domain.ResolveDeviationCommand{WriteMeta: domain.WriteMeta{RequestID: requestID(r), ExpectedRevision: body.ExpectedRevision}, BatchID: batchID, DeviationID: r.PathValue("deviation_id"), CorrectiveAction: body.CorrectiveAction, ResolvedBy: body.ResolvedBy, ResolutionDigest: body.ResolutionDigest, Retest: retest}
-	result, err := s.workflow.ResolveDeviation(cmd)
+	result, err := s.workflow.WithContext(r.Context()).ResolveDeviation(cmd)
 	if err != nil {
 		writeError(w, r, err)
 		return

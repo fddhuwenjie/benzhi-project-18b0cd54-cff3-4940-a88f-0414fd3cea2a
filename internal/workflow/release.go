@@ -29,7 +29,7 @@ func (s *Service) RecordContamination(cmd domain.RecordContaminationCommand) (*d
 	hash, _ := requestHash(cmd)
 	var result *domain.SampleBatch
 	err := s.withBatch(cmd.BatchID, func() error {
-		return s.store.Update(func(state *storage.State) error {
+		return s.store.UpdateContext(s.context(), func(state *storage.State) error {
 			if replay, err := storage.Replay(state, cmd.RequestID, "contamination", hash, &result); replay || err != nil {
 				return err
 			}
@@ -97,7 +97,7 @@ func (s *Service) Review(cmd domain.ReviewCommand) (*domain.SampleBatch, error) 
 	hash, _ := requestHash(cmd)
 	var result *domain.SampleBatch
 	err := s.withBatch(cmd.BatchID, func() error {
-		return s.store.Update(func(state *storage.State) error {
+		return s.store.UpdateContext(s.context(), func(state *storage.State) error {
 			if replay, err := storage.Replay(state, cmd.RequestID, "review", hash, &result); replay || err != nil {
 				return err
 			}
@@ -164,7 +164,7 @@ func (s *Service) Release(cmd domain.ReleaseCommand) (*domain.ReleaseCertificate
 	hash, _ := requestHash(cmd)
 	var result *domain.ReleaseCertificate
 	err := s.withBatch(cmd.BatchID, func() error {
-		return s.store.Update(func(state *storage.State) error {
+		return s.store.UpdateContext(s.context(), func(state *storage.State) error {
 			if replay, err := storage.Replay(state, cmd.RequestID, "release", hash, &result); replay || err != nil {
 				return err
 			}

@@ -39,7 +39,7 @@ func (s *Service) CreateBatch(cmd domain.CreateBatchCommand) (*domain.SampleBatc
 	}
 	var result *domain.SampleBatch
 	err = s.withBatch(cmd.BatchID, func() error {
-		return s.store.Update(func(state *storage.State) error {
+		return s.store.UpdateContext(s.context(), func(state *storage.State) error {
 			if replay, err := storage.Replay(state, cmd.RequestID, "create_batch", hash, &result); replay || err != nil {
 				return err
 			}
