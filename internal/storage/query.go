@@ -9,12 +9,17 @@ import (
 func (s *Store) Batch(id string) (*domain.SampleBatch, error) {
 	var result *domain.SampleBatch
 	err := s.View(func(state *State) error {
-		batch, ok := state.Batches[id]
+		source, ok := state.Batches[id]
 		if !ok {
 			return domain.NewError("not_found", "样本批次不存在", 404)
 		}
-		detached := *batch
-		result = &detached
+		encoded, err := json.Marshal(source)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(encoded, &result); err != nil {
+			return err
+		}
 		return nil
 	})
 	return result, err
