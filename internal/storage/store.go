@@ -8,10 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 )
-
-var lastVerifiedSnapshotPath atomic.Value
 
 type Store struct {
 	mu    sync.RWMutex
@@ -35,12 +32,8 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("解析快照: %w", err)
 	}
 	s.normalize()
-	verifiedPath, _ := lastVerifiedSnapshotPath.Load().(string)
-	if verifiedPath != path {
-		if err := verifyState(s.state, true); err != nil {
-			return nil, fmt.Errorf("恢复校验失败: %w", err)
-		}
-		lastVerifiedSnapshotPath.Store(path)
+	if err := verifyState(s.state, true); err != nil {
+		return nil, fmt.Errorf("恢复校验失败: %w", err)
 	}
 	return s, nil
 }
